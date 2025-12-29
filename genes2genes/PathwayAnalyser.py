@@ -35,6 +35,28 @@ def run_overrepresentation_analysis(gene_set, TARGET_GENESETS=['MSigDB_Hallmark_
     df = df.sort_values('Adjusted P-value',ascending=True)
     return df
 
+def run_overrepresentation_analysis_by_organism(gene_set, TARGET_GENESETS=['GO_Biological_Process_2025', 'GO_Cellular_Component_2025', 'GO_Molecular_Function_2025'], organism = "Mouse"):
+    enr = gp.enrichr(gene_list=gene_set,
+                     gene_sets=TARGET_GENESETS,
+                     organism=organism,
+                     outdir=None,
+                       )
+    df = enr.results[enr.results['Adjusted P-value']<0.05]
+    if(df.shape[0]==0):
+        return df
+    df = df.sort_values('Adjusted P-value')
+    df['-log10 Adjusted P-value'] = [-np.log10(q) for q in df['Adjusted P-value']]
+    max_q = max(df['-log10 Adjusted P-value'][df['-log10 Adjusted P-value']!=np.inf])
+    #df.columns = ['Gene_set']+list(df.columns[1:len(df.columns)])
+    qvals = []
+    for q in df['-log10 Adjusted P-value']:
+        if(q==np.inf):
+            q = -np.log10(0.00000000001) # NOTE: For -log10(p=0.0) we replace p with a very small p-val to avoid inf
+        qvals.append(q)
+    df['-log10 FDR q-val'] = qvals 
+    df = df.sort_values('Adjusted P-value',ascending=True)
+    return df
+
 def plot_overrep_results(df):
     height = df.shape[0]*(1/(np.log2(df.shape[0])+1)) 
     ax = barplot(df,
